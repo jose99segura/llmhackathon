@@ -17,8 +17,9 @@
 		$messages = [];
 	}
 
-	const api = '/api/chat/mistral'; // codegpt, mistral, openai
-	const { input, handleSubmit, messages, isLoading, stop } = useChat({
+	let selectedModel = 'mistral'; // Modelo por defecto
+	let api = `/api/chat/${selectedModel}`;
+	const { input, handleSubmit: chatHandleSubmit, messages, isLoading, stop } = useChat({
 		api,
 		keepLastMessageOnError: true,
 		onResponse: (response: Response) => {
@@ -32,6 +33,16 @@
 			waitMessage.set(false);
 		}
 	});
+
+	function handleSubmit() {
+		chatHandleSubmit();
+	}
+
+	function toggleModel() {
+		selectedModel = selectedModel === 'mistral' ? 'codegpt' : 'mistral';
+		api = `/api/chat/${selectedModel}`;
+		// Aquí podrías reiniciar o actualizar la instancia de useChat si es necesario
+	}
 
 	onMount(() => {
 		textInput = document.querySelector('input');
@@ -54,6 +65,15 @@
 
 	// Genera un número aleatorio para el avatar
 	const avatarSeed = Math.floor(Math.random() * 1000);
+
+	function speakText(text: string) {
+		if ('speechSynthesis' in window) {
+			const utterance = new SpeechSynthesisUtterance(text);
+			window.speechSynthesis.speak(utterance);
+		} else {
+			console.log('Text-to-speech no es compatible con este navegador.');
+		}
+	}
 </script>
 
 <svelte:head>
@@ -61,18 +81,40 @@
 	<meta name="description" content="Mistral and CodeGPT Chatbot Demo" />
 </svelte:head>
 
-<main class="w-full h-full overflow-hidden relative">
-	<div class="flex flex-col gap-4 h-screen">
-		<header class="flex items-center justify-between p-4 fixed top-0 w-full">
-			<h1
-				class="text-lg font-semibold px-2 py-1 tracking-tight backdrop-blur-sm rounded-full bg-white/50"
-			>
-				LLM Hackathon
-			</h1>
+<main class="flex h-screen">
+	<!-- Sidebar -->
+	<aside class="w-64 bg-gray-100 dark:bg-gray-800 flex flex-col justify-between h-full">
+		<div class="p-4">
+			<!-- Modelo Switch -->
+			<label for="model-switch" class="block mb-2 text-gray-800 dark:text-gray-200">Modelo: {selectedModel}</label>
+			<label class="switch">
+				<input type="checkbox" on:change={toggleModel} checked={selectedModel === 'codegpt'}>
+				<span class="slider round"></span>
+			</label>
+		</div>
+		<div class="p-4">
+			<!-- Video -->
+			{#if $isLoading}
+				<video
+					src="/esp_hablando2.mp4"
+					autoplay
+					loop
+					muted
+					class="w-full h-auto max-h-96 object-cover rounded-lg shadow-lg"
+					style="aspect-ratio: 9 / 16;"
+				></video>
+			{/if}
+		</div>
+	</aside>
+
+	<div class="flex-1 flex flex-col">
+		<!-- Navbar -->
+		<header class="flex items-center justify-between p-4 bg-white dark:bg-gray-900 shadow">
+			<h1 class="text-lg font-semibold text-white dark:text-white">LLM Hackathon</h1>
 			<button
 				on:click={() => cleanHistory()}
-				type="submit"
-				class="text-sm px-2 py-1.5 rounded-lg border flex gap-2 items-center ml-auto disabled:cursor-not-allowed disabled:opacity-50 bg-white dark:bg-slate-900"
+				type="button"
+				class="text-sm px-2 py-1.5 rounded-lg border flex gap-2 items-center bg-white dark:bg-slate-900 text-white"
 				disabled={!$messages.length || $isLoading}
 			>
 				<PlusIcon class="size-4" />
@@ -83,7 +125,7 @@
 		<!-- MESSAGES -->
 		<section
 			id="messagesContainer"
-			class="flex flex-col gap-4 px-4 pb-4 h-full overflow-y-auto pt-20"
+			class="flex flex-col gap-4 px-4 pb-4 h-full overflow-y-auto pt-4"
 		>
 			<div class="flex flex-col mx-auto max-w-2xl w-full h-full">
 				{#if $messages.length > 0}
@@ -123,31 +165,6 @@
 				{/if}
 			</div>
 		</section>
-
-		{#if avatarVisible}
-			<!-- Avatar -->
-			<div class="fixed right-4 bottom-24 w-16 h-16 z-50">
-				<img
-					src="/foto_esp_2.png"
-					alt="Avatar de IA"
-					class="w-full h-full object-cover rounded-full shadow-lg"
-					style="transform: scale({$avatarScale});"
-				/>
-			</div>
-		{/if}
-
-		<!-- Video -->
-		{#if $isLoading}
-			<div class="fixed left-4 bottom-24 w-48 h-48 z-50">
-				<video
-					src="/esp_hablando2.mp4"
-					autoplay
-					loop
-					muted
-					class="w-full h-full object-cover rounded-lg shadow-lg"
-				></video>
-			</div>
-		{/if} <!-- Corregido el cierre del bloque -->
 
 		<!-- Chat Input -->
 		<form on:submit={handleSubmit} class="flex gap-2 w-full mt-auto mx-auto max-w-2xl p-4">
@@ -191,8 +208,55 @@
 </main>
 
 <style>
-	/* Asegúrate de que el avatar esté por encima de otros elementos */
-	:global(.z-50) {
-		z-index: 50;
+	.switch {
+		position: relative;
+		display: inline-block;
+		width: 60px;
+		height: 34px;
+	}
+
+	.switch input {
+		opacity: 0;
+		width: 0;
+		height: 0;
+	}
+
+	.slider {
+		position: absolute;
+		cursor: pointer;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: #ccc;
+		transition: .4s;
+	}
+
+	.slider:before {
+		position: absolute;
+		content: "";
+		height: 26px;
+		width: 26px;
+		left: 4px;
+		bottom: 4px;
+		background-color: white;
+		transition: .4s;
+	}
+
+	input:checked + .slider {
+		background-color: #2196F3;
+	}
+
+	input:checked + .slider:before {
+		transform: translateX(26px);
+	}
+
+	.slider.round {
+		border-radius: 34px;
+	}
+
+	.slider.round:before {
+		border-radius: 50%;
 	}
 </style>
+
