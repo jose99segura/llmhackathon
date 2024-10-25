@@ -17,9 +17,10 @@
 		$messages = [];
 	}
 
-	let selectedModel = 'mistral'; // Modelo por defecto
+	let selectedModel = 'codegpt'; // Modelo por defecto
+	let isLoading = writable(false);
 	let api = `/api/chat/${selectedModel}`;
-	const { input, handleSubmit: chatHandleSubmit, messages, isLoading, stop } = useChat({
+	const { input, handleSubmit: chatHandleSubmit, messages, isLoading: useChatLoading, stop } = useChat({
 		api,
 		keepLastMessageOnError: true,
 		onResponse: (response: Response) => {
@@ -35,6 +36,7 @@
 	});
 
 	function handleSubmit() {
+		isLoading.set(true);
 		chatHandleSubmit();
 	}
 
@@ -94,7 +96,7 @@
 		</div>
 		<div class="p-4">
 			<!-- Video -->
-			{#if $isLoading}
+			{#if $isLoading && selectedModel === 'mistral'}
 				<video
 					src="/esp_hablando2.mp4"
 					autoplay
@@ -259,4 +261,3 @@
 		border-radius: 50%;
 	}
 </style>
-
