@@ -1,7 +1,7 @@
 # Obtener modelos de Mistral
 ### https://marketplace.visualstudio.com/items?itemName=humao.rest-client
 
-@MISTRAL_API_KEY=
+@MISTRAL_API_KEY=PP3q6lNyypjN1Ed2c5aUh5kQ3jPLHkrE
 
 GET https://api.mistral.ai/v1/models
 Authorization: Bearer {{MISTRAL_API_KEY}}

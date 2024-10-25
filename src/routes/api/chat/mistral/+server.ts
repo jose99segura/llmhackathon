@@ -8,7 +8,7 @@ const mistral = createMistral({
 	apiKey: env.MISTRAL_API_KEY ?? ''
 });
 
-const system = `You help planning Hackathons.`;
+const system = `Ayudas a los fisioterapeutas a planificar sesiones de rehabilitación.`;
 
 export const POST = (async ({ request }) => {
 	const { messages } = await request.json();
