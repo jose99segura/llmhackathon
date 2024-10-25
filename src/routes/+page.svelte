@@ -5,10 +5,13 @@
 	import { onMount, afterUpdate } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { ArrowUp, Loader, User, BotMessageSquare } from 'lucide-svelte';
+	import { spring } from 'svelte/motion';
 
 	let textInput: HTMLInputElement | null = null;
 	let messagesContainer: HTMLDivElement | null = null;
 	let waitMessage = writable(false);
+	let avatarScale = spring(1);
+	let avatarVisible = true;
 
 	function cleanHistory() {
 		$messages = [];
@@ -43,6 +46,14 @@
 			messagesContainer.scrollTop = messagesContainer.scrollHeight;
 		}
 	});
+
+	function handleInputChange() {
+		avatarScale.set(1.1);
+		setTimeout(() => avatarScale.set(1), 200);
+	}
+
+	// Genera un número aleatorio para el avatar
+	const avatarSeed = Math.floor(Math.random() * 1000);
 </script>
 
 <svelte:head>
@@ -50,7 +61,7 @@
 	<meta name="description" content="Mistral and CodeGPT Chatbot Demo" />
 </svelte:head>
 
-<main class="w-full h-full overflow-hidden">
+<main class="w-full h-full overflow-hidden relative">
 	<div class="flex flex-col gap-4 h-screen">
 		<header class="flex items-center justify-between p-4 fixed top-0 w-full">
 			<h1
@@ -113,12 +124,38 @@
 			</div>
 		</section>
 
+		{#if avatarVisible}
+			<!-- Avatar -->
+			<div class="fixed right-4 bottom-24 w-16 h-16 z-50">
+				<img
+					src="/foto_esp_2.png"
+					alt="Avatar de IA"
+					class="w-full h-full object-cover rounded-full shadow-lg"
+					style="transform: scale({$avatarScale});"
+				/>
+			</div>
+		{/if}
+
+		<!-- Video -->
+		{#if $isLoading}
+			<div class="fixed left-4 bottom-24 w-48 h-48 z-50">
+				<video
+					src="/esp_hablando2.mp4"
+					autoplay
+					loop
+					muted
+					class="w-full h-full object-cover rounded-lg shadow-lg"
+				></video>
+			</div>
+		{/if} <!-- Corregido el cierre del bloque -->
+
 		<!-- Chat Input -->
 		<form on:submit={handleSubmit} class="flex gap-2 w-full mt-auto mx-auto max-w-2xl p-4">
 			<input
 				bind:value={$input}
 				class="border rounded-xl w-full bg-slate-50 px-3 py-2 h-12"
 				placeholder="Type something and press enter"
+				on:input={handleInputChange}
 				on:keydown={(e: KeyboardEvent) => {
 					if (e.key === 'Enter' && !e.shiftKey) {
 						e.preventDefault();
@@ -152,3 +189,10 @@
 		</form>
 	</div>
 </main>
+
+<style>
+	/* Asegúrate de que el avatar esté por encima de otros elementos */
+	:global(.z-50) {
+		z-index: 50;
+	}
+</style>
