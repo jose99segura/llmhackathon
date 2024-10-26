@@ -5,22 +5,20 @@
 	import { onMount, afterUpdate } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { ArrowUp, Loader, User, BotMessageSquare } from 'lucide-svelte';
-	import { spring } from 'svelte/motion';
 
 	let textInput: HTMLInputElement | null = null;
 	let messagesContainer: HTMLDivElement | null = null;
 	let waitMessage = writable(false);
-	let avatarScale = spring(1);
-	let avatarVisible = true;
+	let avatarVisible = writable(true);
 
 	function cleanHistory() {
 		$messages = [];
 	}
 
-	let selectedModel = 'codegpt'; // Modelo por defecto
+	let selectedModel = 'codegpt';
 	let isLoading = writable(false);
 	let api = `/api/chat/${selectedModel}`;
-	const { input, handleSubmit: chatHandleSubmit, messages, isLoading: useChatLoading, stop } = useChat({
+	const { input, handleSubmit: chatHandleSubmit, messages, stop } = useChat({
 		api,
 		keepLastMessageOnError: true,
 		onResponse: (response: Response) => {
@@ -43,7 +41,15 @@
 	function toggleModel() {
 		selectedModel = selectedModel === 'mistral' ? 'codegpt' : 'mistral';
 		api = `/api/chat/${selectedModel}`;
-		// Aquí podrías reiniciar o actualizar la instancia de useChat si es necesario
+		console.log('Modelo cambiado a:', selectedModel);
+	}
+
+	function toggleAvatarVisibility() {
+		avatarVisible.update(visible => {
+			const newValue = !visible;
+			console.log('Cambiando la visibilidad del avatar a:', newValue);
+			return newValue;
+		});
 	}
 
 	onMount(() => {
@@ -59,23 +65,6 @@
 			messagesContainer.scrollTop = messagesContainer.scrollHeight;
 		}
 	});
-
-	function handleInputChange() {
-		avatarScale.set(1.1);
-		setTimeout(() => avatarScale.set(1), 200);
-	}
-
-	// Genera un número aleatorio para el avatar
-	const avatarSeed = Math.floor(Math.random() * 1000);
-
-	function speakText(text: string) {
-		if ('speechSynthesis' in window) {
-			const utterance = new SpeechSynthesisUtterance(text);
-			window.speechSynthesis.speak(utterance);
-		} else {
-			console.log('Text-to-speech no es compatible con este navegador.');
-		}
-	}
 </script>
 
 <svelte:head>
@@ -84,10 +73,8 @@
 </svelte:head>
 
 <main class="flex h-screen">
-	<!-- Sidebar -->
 	<aside class="w-64 bg-gray-100 dark:bg-gray-800 flex flex-col justify-between h-full">
 		<div class="p-4">
-			<!-- Modelo Switch -->
 			<label for="model-switch" class="block mb-2 text-gray-800 dark:text-gray-200">Modelo: {selectedModel}</label>
 			<label class="switch">
 				<input type="checkbox" on:change={toggleModel} checked={selectedModel === 'codegpt'}>
@@ -95,7 +82,13 @@
 			</label>
 		</div>
 		<div class="p-4">
-			<!-- Video -->
+			<label for="avatar-switch" class="block mb-2 text-gray-800 dark:text-gray-200">Mostrar Avatar</label>
+			<label class="switch">
+				<input type="checkbox" on:change={toggleAvatarVisibility} checked={$avatarVisible}>
+				<span class="slider round"></span>
+			</label>
+		</div>
+		<div class="p-4">
 			{#if $isLoading && selectedModel === 'mistral'}
 				<video
 					src="/esp_hablando2.mp4"
@@ -110,7 +103,6 @@
 	</aside>
 
 	<div class="flex-1 flex flex-col">
-		<!-- Navbar -->
 		<header class="flex items-center justify-between p-4 bg-white dark:bg-gray-900 shadow">
 			<h1 class="text-lg font-semibold text-white dark:text-white">LLM Hackathon</h1>
 			<button
@@ -124,7 +116,6 @@
 			</button>
 		</header>
 
-		<!-- MESSAGES -->
 		<section
 			id="messagesContainer"
 			class="flex flex-col gap-4 px-4 pb-4 h-full overflow-y-auto pt-4"
@@ -134,15 +125,17 @@
 					<ul class="flex flex-col gap-2 w-full">
 						{#each $messages as message}
 							<li class="fade-in-from-bottom p-2 rounded flex gap-2">
-								<div
-									class={`size-7 flex items-center justify-center text-sm rounded-full uppercase font-semibold flex-shrink-0 ${message.role !== 'user' ? 'bg-purple-100 text-purple-500' : 'bg-slate-100 text-slate-500'}`}
-								>
+								{#if $avatarVisible}
+									<div
+										class={`size-7 flex items-center justify-center text-sm rounded-full uppercase font-semibold flex-shrink-0 ${message.role !== 'user' ? 'bg-purple-100 text-purple-500' : 'bg-slate-100 text-slate-500'}`}
+									>
 									{#if message.role !== 'user'}
 										<BotMessageSquare class="size-4" />
 									{:else}
 										<User class="size-4" />
-									{/if}
-								</div>
+								{/if}
+									</div>
+								{/if}
 								<div class="flex flex-col gap-2 pt-1.5">
 									<b class="text-xs tracking-tight capitalize">{message.role}</b>
 									<div class="prose prose-base prose-slate flex flex-col">
@@ -168,20 +161,18 @@
 			</div>
 		</section>
 
-		<!-- Chat Input -->
 		<form on:submit={handleSubmit} class="flex gap-2 w-full mt-auto mx-auto max-w-2xl p-4">
 			<input
-				bind:value={$input}
-				class="border rounded-xl w-full bg-slate-50 px-3 py-2 h-12"
-				placeholder="Type something and press enter"
-				on:input={handleInputChange}
-				on:keydown={(e: KeyboardEvent) => {
-					if (e.key === 'Enter' && !e.shiftKey) {
-						e.preventDefault();
-						handleSubmit();
-						waitMessage.set(true);
-					}
-				}}
+					bind:value={$input}
+					class="border rounded-xl w-full bg-slate-50 px-3 py-2 h-12"
+					placeholder="Type something and press enter"
+					on:keydown={(e: KeyboardEvent) => {
+						if (e.key === 'Enter' && !e.shiftKey) {
+							e.preventDefault();
+							handleSubmit();
+							waitMessage.set(true);
+						}
+					}}
 			/>
 			{#if !$isLoading}
 				<button
@@ -261,3 +252,4 @@
 		border-radius: 50%;
 	}
 </style>
+
